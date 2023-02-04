@@ -40,6 +40,7 @@ export interface GlobalDataProps {
 const getAndCommit = async (url: string, mutationName: string, commit: any) => {
   const { data } = await axios.get(url)
   commit(mutationName, data)
+  return data
 }
 /**
  * post获取数据
@@ -60,12 +61,34 @@ const postAndCommit = async (
   return data
 }
 
+// delete获取数据
+const deleteAndCommit = async (
+  url: string,
+  mutationName: string,
+  commit: any
+) => {
+  const { data } = await axios(url, { method: 'DELETE' })
+  commit(mutationName, data)
+}
+
+// patch获取数据
+const patchAndCommit = async (
+  url: string,
+  mutationName: string,
+  commit: Commit,
+  payload: any
+) => {
+  const { data } = await axios(url, { method: 'PATCH', data: payload })
+  commit(mutationName, data)
+  return data
+}
+
 // 2. 创建store
 const store = createStore<GlobalDataProps>({
   // 初始化state
   state: {
     columns: testColumns,
-    posts: testPosts,
+    posts: [],
     user: currentUser,
     error: { status: false },
     loading: false,
@@ -88,6 +111,26 @@ const store = createStore<GlobalDataProps>({
     // 获取专栏下的文章
     fetchPosts(state, rawData) {
       state.posts = rawData.data.list
+    },
+    fetchPost(state, rawData) {
+      state.posts = [rawData.data]
+      // // 更新替换对应post的数据
+      // const targetId = rawData.data._id
+      // const oldIndex = state.posts.findIndex(c => c._id === targetId)
+      // const newPost = rawData.data
+      // state.posts.splice(oldIndex, 1, newPost)
+    },
+    updatePost(state, { data }) {
+      state.posts = state.posts.map((post) => {
+        if (post._id === data._id) {
+          return data
+        } else {
+          return post
+        }
+      })
+    },
+    deletePost(state, { data }) {
+      state.posts = state.posts.filter((post) => post._id !== data._id)
     },
     // 设置loading
     setLoading(state, status) {
@@ -144,6 +187,10 @@ const store = createStore<GlobalDataProps>({
     fetchPosts({ commit }, cid) {
       getAndCommit(`/api/columns/${cid}/posts`, 'fetchPosts', commit)
     },
+    // 获取文章详情
+    fetchPost({ commit }, id) {
+      return getAndCommit(`/api/posts/${id}`, 'fetchPost', commit)
+    },
     // 登录
     login({ commit }, payload) {
       return postAndCommit('/api/user/login', 'login', commit, payload)
@@ -161,6 +208,18 @@ const store = createStore<GlobalDataProps>({
     // 注册
     register({ commit }, payload) {
       return postAndCommit('/api/users', 'register', commit, payload)
+    },
+    // 创建文章
+    createPost({ commit }, payload) {
+      return postAndCommit('/api/posts', 'createPost', commit, payload)
+    },
+    // 更新文章
+    updatePost({ commit }, { id, payload }) {
+      return patchAndCommit(`/api/posts/${id}`, 'updatePost', commit, payload)
+    },
+    // 删除文章
+    deletePost({ commit }, id) {
+      return deleteAndCommit(`/api/posts/${id}`, 'deletePost', commit)
     }
   }
 })

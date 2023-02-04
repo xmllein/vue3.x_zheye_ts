@@ -1,11 +1,12 @@
 <template>
   <div class="create-post-page">
-    <h4>新建文章</h4>
+    <h4>{{ isEditMode ? '编辑文章' : '新建文章' }}</h4>
     <uploader
       action="/api/upload"
       class="d-flex align-items-center justify-content-center bg-light text-seceondary w-100 my-4"
       :before-upload="uploadCheck"
-      @file-upload-success="onFileUploadSuccess"
+      :uploaded="uploadedData"
+      @file-uploaded-success="onFileUploadSuccess"
     >
       <h2>点击上传图片</h2>
       <!-- 上传中 -->
@@ -20,7 +21,7 @@
       <!-- 上传成功 -->
       <template #uploaded="dataProps">
         <div class="uploaded-area">
-          <img :src="dataProps.uploadData.data.url" alt="" />
+          <img :src="dataProps.uploadedData.data.url" alt="" />
           <h3>重新上传</h3>
         </div>
       </template>
@@ -53,12 +54,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { defineComponent, ref, onMounted } from 'vue'
 // store
 import { useStore } from 'vuex'
 import { GlobalDataProps } from '@/store'
 // router
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { PostProps, ResponseType, ImageProps } from '@/testData'
 // uploader 组件
 import Uploader from '@/base/Uploader.vue'
@@ -74,6 +75,11 @@ export default defineComponent({
     Uploader
   },
   setup() {
+    const route = useRoute()
+    const queryId = route.query.id
+    const isEditMode = !!queryId // 两个!!转换为 boolean
+    // 上传图片
+    const uploadedData = ref()
     // 标题
     const titleval = ref('')
     const titleRules: RulesProps = [
@@ -98,6 +104,23 @@ export default defineComponent({
     // router
     const router = useRouter()
 
+    // 组件挂载完成
+    onMounted(() => {
+      if (isEditMode) {
+        store
+          .dispatch('fetchPost', queryId)
+          .then((rawData: ResponseType<PostProps>) => {
+            const currentPost = rawData.data
+            const { image, title, content } = currentPost
+            titleval.value = title
+            contentval.value = content || ''
+            if (image) {
+              uploadedData.value = { data: image }
+            }
+          })
+      }
+    })
+
     // 上传成功
     const onFileUploadSuccess = (rawData: ResponseType<ImageProps>) => {
       if (rawData.data._id) {
@@ -108,23 +131,34 @@ export default defineComponent({
     const onFormSubmit = (result: boolean) => {
       if (result) {
         // 专栏
-        const { column } = store.state.user
+        const { column, _id } = store.state.user
         if (column) {
           const newPost: PostProps = {
-            _id: new Date().getTime() + '',
             title: titleval.value,
             content: contentval.value,
             createdAt: new Date().toLocaleString(),
-            column
+            column,
+            author: _id
           }
           // 有图片
           if (imageId) {
             newPost.image = imageId
           }
+          const actionName = isEditMode ? 'updatePost' : 'createPost'
+          const sendData = isEditMode
+            ? {
+                id: queryId,
+                payload: newPost
+              }
+            : newPost
           // 提交文章
-          store.commit('createPost', newPost)
-          // 跳转到文章详情页
-          router.push({ name: 'column', params: { id: column } })
+          store.dispatch(actionName, sendData).then(() => {
+            createMessage('文章发表成功，2秒后跳转到文章', 'success', 2000)
+            // 跳转到文章详情页
+            setTimeout(() => {
+              router.push({ name: 'column', params: { id: column } })
+            }, 2000)
+          })
         }
       }
     }
@@ -152,7 +186,9 @@ export default defineComponent({
       contentval,
       contentRules,
       uploadCheck,
-      onFileUploadSuccess
+      onFileUploadSuccess,
+      isEditMode,
+      uploadedData
     }
   }
 })

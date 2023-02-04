@@ -60,6 +60,8 @@ export default defineComponent({
         message: '请输入密码'
       }
     ]
+    // 用户名: 111@test.com
+    // 密码: 111111
 
     // 路由
     const router = useRouter()

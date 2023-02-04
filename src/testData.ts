@@ -14,7 +14,7 @@ export interface ColumnProps {
 
 // 文章接口
 export interface PostProps {
-  _id: string
+  _id?: string
   title: string
   content: string
   excerpt?: string
@@ -35,6 +35,7 @@ export interface UserProps {
   description?: string
   avatar?: ImageProps
 }
+
 // 验证规则接口
 export interface RuleProps {
   type: 'required' | 'email' | 'custom'

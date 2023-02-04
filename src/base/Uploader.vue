@@ -32,7 +32,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType } from 'vue'
+import { defineComponent, ref, PropType, watch } from 'vue'
 import axios from '../libs/http'
 
 // 上传文件状态
@@ -49,15 +49,28 @@ export default defineComponent({
     },
     beforeUpload: {
       type: Function as PropType<CheckFunction>
+    },
+    uploaded: {
+      type: Object
     }
   },
   setup(props, context) {
     // 文件输入框
     const fileInput = ref<HTMLInputElement | null>(null)
     // 默认状态
-    const fileStatus = ref<UploadStatus>('ready')
+    const fileStatus = ref<UploadStatus>(props.uploaded ? 'success' : 'ready')
     // 上传成功数据
-    const uploadedData = ref()
+    const uploadedData = ref(props.uploaded)
+
+    watch(
+      () => props.uploaded,
+      (newValue) => {
+        if (newValue) {
+          fileStatus.value = 'success'
+          uploadedData.value = newValue
+        }
+      }
+    )
 
     // 触发点击上传文件
     const triggerUpload = () => {
@@ -96,6 +109,7 @@ export default defineComponent({
             // 上传成功
             fileStatus.value = 'success'
             uploadedData.value = resp.data
+            console.log(resp.data)
             // 触发上传成功事件
             context.emit('file-uploaded-success', resp.data)
           })
