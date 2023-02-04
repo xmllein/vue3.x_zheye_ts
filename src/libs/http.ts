@@ -15,7 +15,6 @@ axios.interceptors.request.use((config) => {
     config.data.append('icode', icode)
   } else {
     // 普通的 body 对象，添加到 data 中
-    console.log('config.data', config.data)
     config.data = { ...config.data, icode }
   }
   return config
