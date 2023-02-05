@@ -47,7 +47,9 @@
         />
       </div>
       <template v-slot:submit>
-        <button class="btn btn-primary btn-large">发表文章</button>
+        <button class="btn btn-primary btn-large">
+          {{ isEditMode ? '更新文章' : '发表文章' }}
+        </button>
       </template>
     </ValidateForm>
   </div>
